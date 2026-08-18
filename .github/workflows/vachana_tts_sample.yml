@@ -1,13 +1,14 @@
 name: Vachana Thai TTS Sample
 
 on:
-  push:
+  pull_request:
     paths:
+      - 'tts_trigger.txt'
       - '.github/workflows/vachana_tts_sample.yml'
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   synthesize:
@@ -27,7 +28,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ffmpeg
 
-      - name: Generate Thai male sample
+      - name: Generate Thai male samples
         run: |
           mkdir -p generated
           python - <<'PY'
@@ -39,10 +40,11 @@ jobs:
           ffmpeg -y -i generated/vachana_th_m_1.wav -af 'highpass=f=70,lowpass=f=15000,loudnorm=I=-16:LRA=7:TP=-1.5' -c:a libmp3lame -b:a 128k generated/vachana_th_m_1.mp3
           ffmpeg -y -i generated/vachana_th_m_2.wav -af 'highpass=f=70,lowpass=f=15000,loudnorm=I=-16:LRA=7:TP=-1.5' -c:a libmp3lame -b:a 128k generated/vachana_th_m_2.mp3
 
-      - name: Commit generated samples
-        run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add generated/vachana_th_m_1.mp3 generated/vachana_th_m_2.mp3
-          git commit -m 'Generate Thai TTS samples' || exit 0
-          git push
+      - name: Upload samples
+        uses: actions/upload-artifact@v4
+        with:
+          name: vachana-thai-male-samples
+          path: |
+            generated/vachana_th_m_1.mp3
+            generated/vachana_th_m_2.mp3
+          retention-days: 7
