@@ -1,0 +1,42 @@
+name: Fetch VachanaTTS Thai male model
+
+on:
+  push:
+    paths:
+      - '.github/workflows/fetch-vachana.yml'
+  workflow_dispatch:
+
+jobs:
+  fetch-model:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Prepare Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Hugging Face downloader
+        run: pip install -U 'huggingface_hub[hf_xet]'
+
+      - name: Download VachanaTTS files
+        run: |
+          mkdir -p model/voices
+          python - <<'PY'
+          from huggingface_hub import hf_hub_download
+          from pathlib import Path
+          repo='VIZINTZOR/VachanaTTS'
+          files=['config.json','speaker_config.json','voices/th_m_1.onnx','voices/th_m_2.onnx']
+          for f in files:
+              p=hf_hub_download(repo_id=repo, filename=f)
+              dst=Path('model')/f
+              dst.parent.mkdir(parents=True,exist_ok=True)
+              dst.write_bytes(Path(p).read_bytes())
+              print(dst, dst.stat().st_size)
+          PY
+
+      - name: Upload model bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: vachana-thai-male-models
+          path: model/
+          retention-days: 1
