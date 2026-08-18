@@ -6,10 +6,16 @@ on:
       - '.github/workflows/fetch-vachana.yml'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   fetch-model:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Prepare Python
         uses: actions/setup-python@v5
         with:
@@ -20,23 +26,25 @@ jobs:
 
       - name: Download VachanaTTS files
         run: |
-          mkdir -p model/voices
+          mkdir -p tts_models/voices
           python - <<'PY'
           from huggingface_hub import hf_hub_download
           from pathlib import Path
           repo='VIZINTZOR/VachanaTTS'
-          files=['config.json','speaker_config.json','voices/th_m_1.onnx','voices/th_m_2.onnx']
+          files=['config.json','speaker_config.json','voices/th_m_1.onnx']
           for f in files:
               p=hf_hub_download(repo_id=repo, filename=f)
-              dst=Path('model')/f
+              dst=Path('tts_models')/f
               dst.parent.mkdir(parents=True,exist_ok=True)
               dst.write_bytes(Path(p).read_bytes())
               print(dst, dst.stat().st_size)
           PY
 
-      - name: Upload model bundle
-        uses: actions/upload-artifact@v4
-        with:
-          name: vachana-thai-male-models
-          path: model/
-          retention-days: 1
+      - name: Commit model files back to repository
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add tts_models
+          git diff --cached --quiet && exit 0
+          git commit -m 'Add free Thai male TTS model files'
+          git push
